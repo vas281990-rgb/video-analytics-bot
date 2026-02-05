@@ -1,7 +1,7 @@
 from sqlalchemy import select, func, and_
 
 from app.db.models import Video, VideoSnapshot
-from app.nlp.schema import QueryIntent
+from app.nlp.schemas import QueryIntent
 
 
 def build_query(intent: QueryIntent):

@@ -58,4 +58,21 @@ async def load_data() -> None:
                             "reports_count": snapshot["reports_count"],
                             "delta_views_count": snapshot["delta_views_count"],
                             "delta_likes_count": snapshot["delta_likes_count"],
-                            "delta_comments_co
+                            "delta_comments_count": snapshot["delta_comments_count"],
+                            "delta_reports_count": snapshot["delta_reports_count"],
+                            "created_at": parse_datetime(snapshot["created_at"]),
+                        }
+                    )
+
+                if snapshots_rows:
+                    await session.execute(
+                        insert(VideoSnapshot).values(snapshots_rows)
+                    )
+
+        await session.commit()
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(load_data())

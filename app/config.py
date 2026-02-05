@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "postgres"
 
     # Telegram bot
-    BOT_TOKEN: str = "8422258435:AAHAKj3w-udaZhy7o9fL4t9bJcTNw7Eui4U"
+    BOT_TOKEN: str
 
     # LLM (optional, later)
 
