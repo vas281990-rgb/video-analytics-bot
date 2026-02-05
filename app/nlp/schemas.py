@@ -12,7 +12,8 @@ class QueryIntent(BaseModel):
     """
     Structured meaning of a natural language query.
 
-    This is the contract between LLM and our backend 🤝
+    This is the contract between LLM and our backend 
+    No guessing is allowed beyond this schema.
     """
 
     metric: Literal[

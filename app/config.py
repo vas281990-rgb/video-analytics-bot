@@ -14,10 +14,6 @@ class Settings(BaseSettings):
     # Telegram bot
     BOT_TOKEN: str
 
-    # LLM (optional, later)
-
-    LLM_API_KEY: str | None = None
-
     # Computed values
 
     @computed_field
