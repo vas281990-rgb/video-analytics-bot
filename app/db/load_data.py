@@ -1,23 +1,40 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal
 from app.db.models import Video, VideoSnapshot
 
 
+def uuid_to_int(value: str) -> int:
+    """
+    Convert UUID-like string to a stable positive integer.
+    Same input -> same output every time.
+    """
+    return abs(hash(value))
+
+
+# Path to source JSON file
 JSON_PATH = Path("data/videos.json")
 
 
 def parse_datetime(value: str) -> datetime:
     """
-    Parse ISO datetime string into Python datetime.
-    JSON gives us strings, DB wants real time ⏳
+    Parse ISO datetime string into timezone-aware UTC datetime.
+
+    JSON gives strings like:
+    2025-11-26T11:00:08.983295Z
+
+    DB expects real datetime objects with timezone.
     """
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+    # Force UTC timezone (safety net)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    return dt.astimezone(timezone.utc)
 
 
 async def load_data() -> None:
@@ -33,10 +50,12 @@ async def load_data() -> None:
         videos = payload["videos"]
 
         for video in videos:
+            video_id = uuid_to_int(video["id"])
+
             video_obj = Video(
-                id=video["id"],
-                creator_id=video["creator_id"],
-                video_created_at=parse_datetime(video["video_created_at"]),
+                id=video_id,
+                creator_id=uuid_to_int(video["creator_id"]),
+                video_created_at=parse_datetime(video["created_at"]),
                 views_count=video["views_count"],
                 likes_count=video["likes_count"],
                 comments_count=video["comments_count"],
@@ -47,7 +66,7 @@ async def load_data() -> None:
 
             for snap in video["snapshots"]:
                 snapshot_obj = VideoSnapshot(
-                    video_id=video["id"],
+                    video_id=video_id,
                     views_count=snap["views_count"],
                     likes_count=snap["likes_count"],
                     comments_count=snap["comments_count"],

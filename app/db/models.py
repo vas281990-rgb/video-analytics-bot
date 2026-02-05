@@ -17,15 +17,29 @@ class Video(Base):
 
     id = Column(BigInteger, primary_key=True)
     creator_id = Column(BigInteger, index=True, nullable=False)
-    video_created_at = Column(DateTime, index=True, nullable=False)
+
+    # Store original video creation time in UTC (timezone-aware)
+    video_created_at = Column(
+        DateTime(timezone=True),
+        index=True,
+        nullable=False,
+    )
 
     views_count = Column(BigInteger, nullable=False)
     likes_count = Column(BigInteger, nullable=False)
     comments_count = Column(BigInteger, nullable=False)
     reports_count = Column(BigInteger, nullable=False)
 
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    # Timestamps managed by DB, always in UTC
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     snapshots = relationship("VideoSnapshot", back_populates="video")
 
@@ -51,8 +65,18 @@ class VideoSnapshot(Base):
     delta_comments_count = Column(BigInteger, nullable=False)
     delta_reports_count = Column(BigInteger, nullable=False)
 
-    created_at = Column(DateTime, index=True, nullable=False)
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    # Snapshot timestamp, must be timezone-aware (UTC)
+    created_at = Column(
+        DateTime(timezone=True),
+        index=True,
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     video = relationship("Video", back_populates="snapshots")
 

@@ -26,3 +26,4 @@ class QueryIntent(BaseModel):
     creator_id: int | None = None
     min_views: int | None = None
     date_range: DateRange | None = None
+    all_time: bool = False
