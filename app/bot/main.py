@@ -1,48 +1,37 @@
 import asyncio
 import logging
+import os
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import Message
 
-from app.config.settings import settings
 from app.db.session import AsyncSessionLocal
-from app.db.queries import build_query
-from app.nlp.parser import NLPParser
+from app.services.analytics import build_sql_query
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot(token=settings.BOT_TOKEN)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN is not set")
+
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-parser = NLPParser()
 
+@dp.message(F.text)
+async def handle_message(message: Message):
+    """
+    Main message handler.
+    """
+    user_text = message.text.strip()
 
-@dp.message(CommandStart())
-async def start_handler(message: types.Message):
-    """
-    Simple /start command.
-    """
-    await message.answer(
-        "Привет! Я бот для аналитики видео 📊\n"
-        "Задай вопрос на русском — я отвечу числом."
-    )
-
-
-@dp.message()
-async def analytics_handler(message: types.Message):
-    """
-    Main handler: one message → one numeric answer.
-    """
     try:
-        intent = await parser.parse(message.text)
-
-        query = build_query(intent)
+        query = build_sql_query(user_text)
 
         async with AsyncSessionLocal() as session:
             result = await session.execute(query)
             value = result.scalar()
 
-        # Always return a number
         await message.answer(str(value or 0))
 
     except Exception as exc:
@@ -54,9 +43,6 @@ async def analytics_handler(message: types.Message):
 
 
 async def main():
-    """
-    Entry point for the Telegram bot.
-    """
     await dp.start_polling(bot)
 
 
