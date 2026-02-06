@@ -1,4 +1,5 @@
 from sqlalchemy import select, func, and_
+from datetime import datetime, time
 
 from app.db.models import Video, VideoSnapshot
 from app.nlp.schemas import QueryIntent
@@ -9,7 +10,7 @@ def build_query(intent: QueryIntent):
     Convert structured intent into a SQLAlchemy query.
 
     Think of this function as a translator:
-    human meaning → strict SQL logic 
+    human meaning → strict SQL logic
     """
 
     if intent.metric == "count_videos":
@@ -26,11 +27,8 @@ def build_query(intent: QueryIntent):
 
     raise ValueError(f"Unknown metric: {intent.metric}")
 
-def _count_videos(intent: QueryIntent):
-    """
-    Count videos with optional filters.
-    """
 
+def _count_videos(intent: QueryIntent):
     conditions = []
 
     if intent.creator_id is not None:
@@ -38,10 +36,18 @@ def _count_videos(intent: QueryIntent):
 
     if intent.date_range:
         if intent.date_range.date_from:
-            conditions.append(Video.video_created_at >= intent.date_range.date_from)
+            date_from_dt = datetime.combine(
+                intent.date_range.date_from,
+                time.min
+            )
+            conditions.append(Video.video_created_at >= date_from_dt)
 
         if intent.date_range.date_to:
-            conditions.append(Video.video_created_at <= intent.date_range.date_to)
+            date_to_dt = datetime.combine(
+                intent.date_range.date_to,
+                time.max
+            )
+            conditions.append(Video.video_created_at <= date_to_dt)
 
     query = select(func.count()).select_from(Video)
 
@@ -50,32 +56,69 @@ def _count_videos(intent: QueryIntent):
 
     return query
 
+
 def _count_videos_with_new_views(intent: QueryIntent):
     query = (
         select(func.count(func.distinct(VideoSnapshot.video_id)))
+        .select_from(VideoSnapshot)
+        .join(Video, Video.id == VideoSnapshot.video_id)
         .where(VideoSnapshot.delta_views_count > 0)
     )
+
+    if intent.creator_id is not None:
+        query = query.where(Video.creator_id == intent.creator_id)
+
     if intent.date_range:
         if intent.date_range.date_from:
-            query = query.where(VideoSnapshot.created_at >= intent.date_range.date_from)
+            date_from_dt = datetime.combine(
+                intent.date_range.date_from,
+                time.min
+            )
+            query = query.where(VideoSnapshot.created_at >= date_from_dt)
+
         if intent.date_range.date_to:
-            query = query.where(VideoSnapshot.created_at <= intent.date_range.date_to)
+            date_to_dt = datetime.combine(
+                intent.date_range.date_to,
+                time.max
+            )
+            query = query.where(VideoSnapshot.created_at <= date_to_dt)
+
     return query
+
 
 def _sum_views_delta(intent: QueryIntent):
     query = select(func.coalesce(func.sum(VideoSnapshot.delta_views_count), 0))
-    
+
     if intent.date_range:
         if intent.date_range.date_from:
-            query = query.where(VideoSnapshot.created_at >= intent.date_range.date_from)
+            date_from_dt = datetime.combine(
+                intent.date_range.date_from,
+                time.min
+            )
+            query = query.where(VideoSnapshot.created_at >= date_from_dt)
+
         if intent.date_range.date_to:
-            query = query.where(VideoSnapshot.created_at <= intent.date_range.date_to)
+            date_to_dt = datetime.combine(
+                intent.date_range.date_to,
+                time.max
+            )
+            query = query.where(VideoSnapshot.created_at <= date_to_dt)
+
     return query
 
-def _count_videos_by_views(intent: QueryIntent):
-    query = select(func.count()).select_from(Video)
 
-    conditions = [Video.views_count >= intent.min_views]
+def _count_videos_by_views(intent: QueryIntent):
+    conditions = []
+
+    if intent.min_views is not None:
+        conditions.append(Video.views_count >= intent.min_views)
+
     if intent.creator_id is not None:
         conditions.append(Video.creator_id == intent.creator_id)
-    return query.where(and_(*conditions))
+
+    query = select(func.count()).select_from(Video)
+
+    if conditions:
+        query = query.where(and_(*conditions))
+
+    return query
