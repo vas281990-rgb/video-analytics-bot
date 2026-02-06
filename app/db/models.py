@@ -1,6 +1,7 @@
 from sqlalchemy import (
     Column,
     Integer,
+    String,
     BigInteger,
     DateTime,
     ForeignKey,
@@ -14,9 +15,8 @@ from app.db.base import Base
 
 class Video(Base):
     __tablename__ = "videos"
-
-    id = Column(BigInteger, primary_key=True)
-    creator_id = Column(BigInteger, index=True, nullable=False)
+    id = Column(String, primary_key=True)
+    creator_id = Column(String, index=True, nullable=False)
 
     # Store original video creation time in UTC (timezone-aware)
     video_created_at = Column(
@@ -46,10 +46,9 @@ class Video(Base):
 
 class VideoSnapshot(Base):
     __tablename__ = "video_snapshots"
-
-    id = Column(BigInteger, primary_key=True)
+    id = Column(Integer, primary_key=True)
     video_id = Column(
-        BigInteger,
+        String,
         ForeignKey("videos.id", ondelete="CASCADE"),
         index=True,
         nullable=False,

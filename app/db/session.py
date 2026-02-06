@@ -1,7 +1,11 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
+from dotenv import load_dotenv
 from app.config.settings import settings
+
+# Load environment variables from .env
+load_dotenv()
 
 # Build DATABASE_URL from settings
 DATABASE_URL = (

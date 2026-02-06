@@ -6,15 +6,6 @@ from pathlib import Path
 from app.db.session import AsyncSessionLocal
 from app.db.models import Video, VideoSnapshot
 
-
-def uuid_to_int(value: str) -> int:
-    """
-    Convert UUID-like string to a stable positive integer.
-    Same input -> same output every time.
-    """
-    return abs(hash(value))
-
-
 # Path to source JSON file
 JSON_PATH = Path("data/videos.json")
 
@@ -50,11 +41,11 @@ async def load_data() -> None:
         videos = payload["videos"]
 
         for video in videos:
-            video_id = uuid_to_int(video["id"])
+            video_id = video["id"]
 
             video_obj = Video(
                 id=video_id,
-                creator_id=uuid_to_int(video["creator_id"]),
+                creator_id=video["creator_id"],
                 video_created_at=parse_datetime(video["created_at"]),
                 views_count=video["views_count"],
                 likes_count=video["likes_count"],

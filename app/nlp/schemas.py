@@ -11,9 +11,6 @@ class DateRange(BaseModel):
 class QueryIntent(BaseModel):
     """
     Structured meaning of a natural language query.
-
-    This is the contract between LLM and our backend 
-    No guessing is allowed beyond this schema.
     """
 
     metric: Literal[
@@ -23,7 +20,7 @@ class QueryIntent(BaseModel):
         "count_videos_by_views",
     ]
 
-    creator_id: int | None = None
+    creator_id: str | None = None
     min_views: int | None = None
     date_range: DateRange | None = None
     all_time: bool = False
