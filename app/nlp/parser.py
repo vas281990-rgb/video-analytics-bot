@@ -5,8 +5,18 @@ from app.nlp.schemas import QueryIntent, DateRange
 class NLPParser:
     
     MONTHS_MAP = {
-        "янв": 1, "фев": 2, "мар": 3, "апр": 4, "май": 5, "июн": 6,
-        "июл": 7, "авг": 8, "сен": 9, "окт": 10, "ноя": 11, "дек": 12
+        "янв": 1, "января": 1,
+        "фев": 2, "февраля": 2,
+        "мар": 3, "марта": 3,
+        "апр": 4, "апреля": 4,
+        "май": 5, "мая": 5,
+        "июн": 6, "июня": 6,
+        "июл": 7, "июля": 7,
+        "авг": 8, "августа": 8,
+        "сен": 9, "сентября": 9,
+        "окт": 10, "октября": 10,
+        "ноя": 11, "ноября": 11,
+        "дек": 12, "декабря": 12,
     }
 
     async def parse(self, text: str) -> QueryIntent:
@@ -20,12 +30,10 @@ class NLPParser:
         elif "больше" in text and "просмотров" in text:
             metric = "count_videos_by_views"
 
-        # 2. Ищем Creator ID и Min Views (оставляем как было)
+        # 2. Searching Creator ID и Min Views 
         creator_id = None
-        match_id = re.search(
-            r"id\s*([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})",
-            text
-        )
+        match_id = re.search(r"id\s+([a-f0-9\-]{24,36})", text)
+        
         if match_id:
             creator_id = match_id.group(1)
 
@@ -51,11 +59,15 @@ class NLPParser:
         
         extracted_dates = []
         for d, m, y in dates:
-            month_num = 11 
+            month_num = None 
             for name, num in self.MONTHS_MAP.items():
                 if name in m:
                     month_num = num
-                    break
+                    break     
+
+            if month_num is None:
+                continue
+            
             extracted_dates.append(date(int(y), month_num, int(d)))
 
         if len(extracted_dates) >= 2:

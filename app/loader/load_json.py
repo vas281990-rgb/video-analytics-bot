@@ -29,7 +29,7 @@ async def load_data() -> None:
 
     videos = data["videos"]
 
-    async with AsyncSessionLocal() as session:  # type: AsyncSession
+    async with AsyncSessionLocal() as session:  
         async with session.begin():
             for video in videos:
                 video_row = {

@@ -1,5 +1,5 @@
 from sqlalchemy import select, func, and_
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 
 from app.db.models import Video, VideoSnapshot
 from app.nlp.schemas import QueryIntent
@@ -8,9 +8,6 @@ from app.nlp.schemas import QueryIntent
 def build_query(intent: QueryIntent):
     """
     Convert structured intent into a SQLAlchemy query.
-
-    Think of this function as a translator:
-    human meaning → strict SQL logic
     """
 
     if intent.metric == "count_videos":
@@ -38,14 +35,16 @@ def _count_videos(intent: QueryIntent):
         if intent.date_range.date_from:
             date_from_dt = datetime.combine(
                 intent.date_range.date_from,
-                time.min
+                time.min,
+                tzinfo=timezone.utc
             )
             conditions.append(Video.video_created_at >= date_from_dt)
 
         if intent.date_range.date_to:
             date_to_dt = datetime.combine(
                 intent.date_range.date_to,
-                time.max
+                time.max,
+                tzinfo=timezone.utc
             )
             conditions.append(Video.video_created_at <= date_to_dt)
 
@@ -72,14 +71,16 @@ def _count_videos_with_new_views(intent: QueryIntent):
         if intent.date_range.date_from:
             date_from_dt = datetime.combine(
                 intent.date_range.date_from,
-                time.min
+                time.min,
+                tzinfo=timezone.utc
             )
             query = query.where(VideoSnapshot.created_at >= date_from_dt)
 
         if intent.date_range.date_to:
             date_to_dt = datetime.combine(
                 intent.date_range.date_to,
-                time.max
+                time.max,
+                tzinfo=timezone.utc
             )
             query = query.where(VideoSnapshot.created_at <= date_to_dt)
 
@@ -93,14 +94,16 @@ def _sum_views_delta(intent: QueryIntent):
         if intent.date_range.date_from:
             date_from_dt = datetime.combine(
                 intent.date_range.date_from,
-                time.min
+                time.min,
+                tzinfo=timezone.utc
             )
             query = query.where(VideoSnapshot.created_at >= date_from_dt)
 
         if intent.date_range.date_to:
             date_to_dt = datetime.combine(
                 intent.date_range.date_to,
-                time.max
+                time.max,
+                tzinfo=timezone.utc
             )
             query = query.where(VideoSnapshot.created_at <= date_to_dt)
 
@@ -108,17 +111,30 @@ def _sum_views_delta(intent: QueryIntent):
 
 
 def _count_videos_by_views(intent: QueryIntent):
-    conditions = []
+    if intent.min_views is None:
+        raise ValueError("min_views is required for count_videos_by_views")
 
-    if intent.min_views is not None:
-        conditions.append(Video.views_count >= intent.min_views)
+    query = select(func.count()).select_from(Video)
+
+    conditions = [
+        Video.views_count > intent.min_views
+    ]
 
     if intent.creator_id is not None:
         conditions.append(Video.creator_id == intent.creator_id)
 
-    query = select(func.count()).select_from(Video)
+    if intent.date_range:
+        if intent.date_range.date_from:
+            conditions.append(
+                Video.video_created_at >= datetime.combine(
+                    intent.date_range.date_from, time.min, tzinfo=timezone.utc
+                )
+            )
+        if intent.date_range.date_to:
+            conditions.append(
+                Video.video_created_at <= datetime.combine(
+                    intent.date_range.date_to, time.max, tzinfo=timezone.utc
+                )
+            )
 
-    if conditions:
-        query = query.where(and_(*conditions))
-
-    return query
+    return query.where(and_(*conditions))
