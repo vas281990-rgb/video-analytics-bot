@@ -1,90 +1,63 @@
 import re
 from datetime import date, datetime
-
 from app.nlp.schemas import QueryIntent, DateRange
 
-
 class NLPParser:
-    """
-    Deterministic parser:
-    Russian text → structured QueryIntent.
-    """
+    
+    MONTHS_MAP = {
+        "янв": 1, "фев": 2, "мар": 3, "апр": 4, "май": 5, "июн": 6,
+        "июл": 7, "авг": 8, "сен": 9, "окт": 10, "ноя": 11, "дек": 12
+    }
 
     async def parse(self, text: str) -> QueryIntent:
         text = text.lower()
-
-        # -----------------------
-        # 1. Определяем metric
-        # -----------------------
-
+        
+        metric = "count_videos"
         if "прирост" in text or "выросли" in text:
             metric = "sum_views_delta"
-
         elif "новые просмотры" in text or "получали новые просмотры" in text:
             metric = "count_videos_with_new_views"
-
         elif "больше" in text and "просмотров" in text:
             metric = "count_videos_by_views"
 
-        elif "сколько" in text and "видео" in text:
-            metric = "count_videos"
-
-        else:
-            raise ValueError("Cannot detect metric")
-
-        # -----------------------
-        # 2. Creator ID
-        # -----------------------
-
+        # 2. Ищем Creator ID и Min Views (оставляем как было)
         creator_id = None
-        match = re.search(r"id\s*(\d+)", text)
-        if match:
-            creator_id = int(match.group(1))
-
-        # -----------------------
-        # 3. Минимальные просмотры
-        # -----------------------
+        match_id = re.search(r"id\s*(\d+)", text)
+        if match_id:
+            creator_id = int(match_id.group(1))
 
         min_views = None
-        match = re.search(r"больше\s+([\d\s]+)", text)
-        if match:
-            min_views = int(match.group(1).replace(" ", ""))
+        match_views = re.search(r"больше\s+([\d\s]+)", text)
+        if match_views:
+            min_views = int(match_views.group(1).replace(" ", ""))
 
-        # -----------------------
-        # 4. Даты
-        # -----------------------
-
-        date_range = None
-        all_time = False
-
-        if "за всё время" in text or "за все время" in text:
-            all_time = True
-
-        # формат: 27 ноября 2025
-        match = re.search(
-            r"(\d{1,2})\s+(ноября|ноябрь)\s+(\d{4})", text
-        )
-        if match:
-            day, _, year = match.groups()
-            d = date(int(year), 11, int(day))
-            date_range = DateRange(date_from=d, date_to=d)
-
-        # формат: с 1 ноября 2025 по 5 ноября 2025
-        match = re.search(
-            r"с\s+(\d{1,2})\s+ноября\s+(\d{4}).*по\s+(\d{1,2})\s+ноября\s+(\d{4})",
-            text,
-        )
-        if match:
-            d1, y1, d2, y2 = match.groups()
-            date_range = DateRange(
-                date_from=date(int(y1), 11, int(d1)),
-                date_to=date(int(y2), 11, int(d2)),
-            )
+        date_range = self._extract_date_range(text)
 
         return QueryIntent(
             metric=metric,
             creator_id=creator_id,
             min_views=min_views,
             date_range=date_range,
-            all_time=all_time,
+            all_time="все время" in text
         )
+
+    def _extract_date_range(self, text: str) -> DateRange:
+
+        date_pattern = r"(\d{1,2})\s+([а-я]{3,})\s+(\d{4})"
+        dates = re.findall(date_pattern, text)
+        
+        extracted_dates = []
+        for d, m, y in dates:
+            month_num = 11 
+            for name, num in self.MONTHS_MAP.items():
+                if name in m:
+                    month_num = num
+                    break
+            extracted_dates.append(date(int(y), month_num, int(d)))
+
+        if len(extracted_dates) >= 2:
+            return DateRange(date_from=extracted_dates[0], date_to=extracted_dates[1])
+        elif len(extracted_dates) == 1:
+            return DateRange(date_from=extracted_dates[0], date_to=extracted_dates[0])
+        
+        return None

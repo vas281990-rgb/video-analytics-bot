@@ -9,7 +9,7 @@ def build_query(intent: QueryIntent):
     Convert structured intent into a SQLAlchemy query.
 
     Think of this function as a translator:
-    human meaning → strict SQL logic 🧠➡️🧮
+    human meaning → strict SQL logic 
     """
 
     if intent.metric == "count_videos":
@@ -38,10 +38,10 @@ def _count_videos(intent: QueryIntent):
 
     if intent.date_range:
         if intent.date_range.date_from:
-            conditions.append(Video.created_at >= intent.date_range.date_from)
+            conditions.append(Video.video_created_at >= intent.date_range.date_from)
 
         if intent.date_range.date_to:
-            conditions.append(Video.created_at <= intent.date_range.date_to)
+            conditions.append(Video.video_created_at <= intent.date_range.date_to)
 
     query = select(func.count()).select_from(Video)
 
