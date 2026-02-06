@@ -7,6 +7,8 @@ from aiogram.types import Message
 
 from app.db.session import AsyncSessionLocal
 from app.services.analytics import build_sql_query
+from app.nlp.parser import NLPParser
+from app.db.queries import build_query
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,6 +18,7 @@ if not BOT_TOKEN:
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+parser = NLPParser()
 
 
 @dp.message(F.text)
@@ -26,13 +29,14 @@ async def handle_message(message: Message):
     user_text = message.text.strip()
 
     try:
+        intent = await parser.parse(user_text)
         query = build_sql_query(user_text)
 
         async with AsyncSessionLocal() as session:
             result = await session.execute(query)
             value = result.scalar()
 
-        await message.answer(str(value or 0))
+        await message.answer(str(value if value is not None else o))
 
     except Exception as exc:
         logging.exception(exc)
