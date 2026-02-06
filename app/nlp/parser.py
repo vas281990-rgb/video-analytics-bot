@@ -22,7 +22,10 @@ class NLPParser:
 
         # 2. Ищем Creator ID и Min Views (оставляем как было)
         creator_id = None
-        match_id = re.search(r"id\s*([a-f0-9]+)", text) # Ищем hex-строку
+        match_id = re.search(
+            r"id\s*([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})",
+            text
+        )
         if match_id:
             creator_id = match_id.group(1)
 
